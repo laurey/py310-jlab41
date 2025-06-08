@@ -1,0 +1,132 @@
+name: Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: "*"
+
+  # schedule:
+  # - cron: "0 8 * * *"
+
+jobs:
+  pre-setup:
+    name: Run pre-setup hook
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Base Setup
+        uses: jupyterlab/maintainer-tools/.github/actions/base-setup@v1
+
+      - name: Install dependencies
+        run: |
+          pip install "jupyterlab>=4.0.0,<5"
+          jlpm install
+
+      - name: Lint frontend
+        run: |
+          jlpm run lint:check
+
+  test-js:
+    name: Test JavaScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Base Setup
+        uses: jupyterlab/maintainer-tools/.github/actions/base-setup@v1
+
+      - name: Install dependencies
+        run: |
+          yarn -v
+          npm -v
+          node -v
+          python -m pip -V
+          pip install "jupyterlab>=4.0.0,<5"
+          jlpm -v
+          jlpm install
+          jlpm run dev
+
+      - name: Run Tests
+        if: false
+        run: |
+          set -eux
+          jlpm run test
+
+  test-py:
+    name: Test Python
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Base Setup
+        uses: jupyterlab/maintainer-tools/.github/actions/base-setup@v1
+
+      - name: Install the Python dependencies
+        run: |
+          yarn -v
+          npm -v
+          node -v
+          python -m pip -V
+          pip install "jupyterlab>=4.0.0,<5"
+          jlpm -v
+          jlpm install
+          jlpm run dev
+
+      - name: List installed packages
+        run: |
+          pip freeze
+          pip check
+          pip list
+
+      - name: Build the extension
+        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
+        shell: bash
+        run: |
+          set -eux
+          jupyter server extension list
+          jupyter server extension list 2>&1 | grep -ie "reverse_proxy_extension.*OK"
+          jupyter labextension list
+          jupyter labextension list 2>&1 | grep -ie "@jlab-examples/hello-world.*OK"
+          # python -m jupyterlab.browser_check
+
+  make_sdist:
+    name: Make SDist
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jupyterlab/maintainer-tools/.github/actions/base-setup@v1
+      - name: Build SDist
+        shell: bash
+        run: |
+          pip install build
+          find packages/* -maxdepth 0 -type d | xargs -L 1 python -m build -s --outdir dist/
+          ls -alF dist
+      - uses: actions/upload-artifact@v4
+        if: false
+        with:
+          name: "sdist"
+          path: dist/*.tar.gz

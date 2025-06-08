@@ -1,0 +1,33 @@
+{
+  "name": "@jlab-examples/all",
+  "private": true,
+  "scripts": {
+    "dev": "python scripts/dev_install.py",
+    "build": "lerna run build",
+    "clean": "lerna run clean",
+    "install-py": "lerna exec --concurrency 4 -- python -m pip install \".\"",
+    "install-dev": "lerna exec --concurrency 4 -- python -m pip install -e \".\"",
+    "install-ext": "lerna run install:extension",
+    "lint": "jlpm && lerna run lint",
+    "lint:check": "lerna run lint:check",
+    "test": "lerna run test"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "husky": "^8.0.3",
+    "lerna": "^8.1.1",
+    "lint-staged": "^15.1.0",
+    "prettier": "^2.1.1"
+  },
+  "resolutions": {
+    "parse5": "~7.1",
+    "entities": "~4.5.0"
+  }
+}
